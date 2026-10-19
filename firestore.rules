@@ -1,0 +1,47 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── USER PROFILE ──────────────────────────────────────────
+    // Each user can only read/write their own profile document.
+    // Admins can read all user profiles (for the admin panel).
+    match /users/{userId} {
+      allow read:   if request.auth != null &&
+                       (request.auth.uid == userId || isAdmin());
+      allow create: if request.auth != null &&
+                       request.auth.uid == userId &&
+                       // Prevent self-granting admin on creation
+                       request.resource.data.admin == false;
+      allow update: if request.auth != null &&
+                       (
+                         // Owner can update their own profile (but not escalate admin or toggle disabled)
+                         (request.auth.uid == userId &&
+                          !request.resource.data.diff(resource.data).affectedKeys().hasAny(['admin','disabled']))
+                         ||
+                         // Admin can update any user (e.g. set disabled flag)
+                         isAdmin()
+                       );
+
+      // ── ENTRIES (sub-collection) ───────────────────────────
+      // Only the owning user can read/write their own entries.
+      match /entries/{entryId} {
+        allow read, write: if request.auth != null &&
+                              request.auth.uid == userId;
+      }
+    }
+
+    // ── ACCOUNT REQUESTS ─────────────────────────────────────
+    // Anyone (unauthenticated) can create a request.
+    // Only admins can read, update (approve/deny), or delete requests.
+    match /accountRequests/{requestId} {
+      allow create: if true;  // public — anyone can submit an access request
+      allow read, update, delete: if request.auth != null && isAdmin();
+    }
+
+    // Helper: check if the requesting user is an admin
+    function isAdmin() {
+      return request.auth != null &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.admin == true;
+    }
+  }
+}

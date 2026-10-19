@@ -1,0 +1,1949 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <title>STR Loophole Tracker</title>
+
+  <!-- Favicon & PWA icons -->
+  <link rel="icon" type="image/x-icon" href="favicon.ico" />
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="favicon-16.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png" />
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#0d1b35" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #f4f6f9;
+      --surface: #ffffff;
+      --border: #dde1e7;
+      --text: #1a1e27;
+      --muted: #6b7280;
+      --accent: #2563eb;
+      --accent-light: #eff6ff;
+      --danger: #dc2626;
+      --success: #16a34a;
+      --warning: #d97706;
+      --radius: 8px;
+      --shadow: 0 1px 4px rgba(0,0,0,.08);
+      --header-h: 80px;
+    }
+
+    body { font-family: -apple-system,"Segoe UI",system-ui,sans-serif; font-size:14px; background:var(--bg); color:var(--text); line-height:1.6; min-height:100vh; }
+
+    /* ── AUTH SCREEN ── */
+    #auth-screen { display:flex; align-items:center; justify-content:center; min-height:100vh; padding:16px; }
+    .auth-card { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:36px 32px; width:100%; max-width:400px; box-shadow:0 4px 24px rgba(0,0,0,.1); }
+    .auth-logo { font-size:28px; font-weight:800; color:var(--accent); margin-bottom:4px; }
+    .auth-sub { font-size:13px; color:var(--muted); margin-bottom:28px; }
+    .auth-tabs { display:flex; border-bottom:2px solid var(--border); margin-bottom:24px; }
+    .auth-tab { flex:1; padding:8px; background:none; border:none; font-size:13px; font-weight:600; color:var(--muted); cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-2px; transition:all .15s; }
+    .auth-tab.active { color:var(--accent); border-bottom-color:var(--accent); }
+    .auth-form { display:flex; flex-direction:column; gap:14px; }
+    .auth-form input { padding:10px 12px; border:1px solid var(--border); border-radius:6px; font-size:14px; width:100%; }
+    .auth-form input:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 3px rgba(37,99,235,.1); }
+    .auth-error { font-size:12px; color:var(--danger); padding:8px 12px; background:#fee2e2; border-radius:6px; display:none; }
+    .auth-error.show { display:block; }
+    .auth-success { font-size:12px; color:var(--success); padding:8px 12px; background:#dcfce7; border-radius:6px; display:none; }
+    .auth-success.show { display:block; }
+    #login-form, #request-form { display:none; }
+    #login-form.active, #request-form.active { display:flex; }
+
+    /* ── HEADER ── */
+    header { background:#0d1b35; color:#fff; padding:0 16px 0 0; display:flex; align-items:center; justify-content:space-between; height:var(--header-h); position:sticky; top:0; z-index:100; box-shadow:0 2px 12px rgba(0,0,0,.4); overflow:hidden; }
+    .header-banner { display:block; height:100%; width:auto; max-width:55%; object-fit:contain; object-position:left center; flex-shrink:0; }
+    .header-left { display:flex; flex-direction:column; flex:1; }
+    .header-title { font-size:0; }
+    .header-actions { display:flex; gap:6px; align-items:center; flex-shrink:0; padding-right:0; }
+
+    /* ── LAYOUT ── */
+    .app { max-width:1100px; margin:0 auto; padding:16px; }
+
+    /* ── TABS ── */
+    .tabs { display:flex; gap:0; margin-bottom:16px; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; }
+    .tab-btn { flex:1; padding:10px 4px; border:none; background:transparent; cursor:pointer; font-size:12px; font-weight:600; color:var(--muted); transition:all .15s; border-right:1px solid var(--border); white-space:nowrap; }
+    .tab-btn:last-child { border-right:none; }
+    .tab-btn.active { background:var(--accent); color:#fff; }
+    .tab-btn:hover:not(.active) { background:var(--bg); }
+    .tab-panel { display:none; }
+    .tab-panel.active { display:block; }
+
+    /* ── CARDS ── */
+    .card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:16px; box-shadow:var(--shadow); }
+    .card + .card { margin-top:12px; }
+    .card-title { font-size:14px; font-weight:700; margin-bottom:14px; }
+
+    /* ── FORM ── */
+    .form-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:12px; }
+    .form-group { display:flex; flex-direction:column; gap:5px; }
+    .form-group.full { grid-column:1 / -1; }
+    label { font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.4px; }
+    input, select, textarea { border:1px solid var(--border); border-radius:6px; padding:9px 10px; font-size:14px; font-family:inherit; background:var(--surface); color:var(--text); transition:border .15s; width:100%; -webkit-appearance:none; }
+    input:focus, select:focus, textarea:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 3px rgba(37,99,235,.1); }
+    textarea { resize:vertical; min-height:68px; }
+    .duration-row { display:flex; gap:8px; }
+    .duration-row input { flex:0 0 90px; }
+    .duration-row select { flex:1; }
+
+    /* ── BUTTONS ── */
+    .btn { display:inline-flex; align-items:center; justify-content:center; gap:6px; padding:9px 16px; border:none; border-radius:6px; cursor:pointer; font-size:13px; font-weight:600; transition:all .15s; text-decoration:none; -webkit-tap-highlight-color:transparent; }
+    .btn-primary { background:var(--accent); color:#fff; }
+    .btn-primary:active { background:#1d4ed8; }
+    .btn-danger { background:#fee2e2; color:var(--danger); }
+    .btn-ghost { background:transparent; color:var(--muted); border:1px solid var(--border); }
+    .btn-ghost:active { background:var(--bg); }
+    .btn-sm { padding:5px 10px; font-size:12px; }
+    .btn-full { width:100%; }
+    .btn-header { color:#fff !important; border-color:rgba(255,255,255,.4) !important; font-size:12px; }
+
+    /* ── PERSON TOGGLE ── */
+    .person-toggle { display:flex; border:1px solid var(--border); border-radius:6px; overflow:hidden; }
+    .person-toggle button { flex:1; padding:9px 8px; border:none; background:var(--surface); cursor:pointer; font-size:13px; font-weight:600; color:var(--muted); transition:all .15s; }
+    .person-toggle button.active { background:var(--accent); color:#fff; }
+    .person-toggle button.active-wife { background:#9d174d; color:#fff; }
+    .person-both-hint { font-size:11px; color:var(--muted); margin-top:5px; }
+
+    /* ── PHOTO UPLOAD ── */
+    .photo-zone { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+    .photo-btn { border:2px dashed var(--border); border-radius:6px; padding:14px 8px; text-align:center; cursor:pointer; position:relative; transition:border .15s; background:var(--bg); }
+    .photo-btn:hover { border-color:var(--accent); }
+    .photo-btn input[type="file"] { position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; height:100%; }
+    .photo-btn-icon { font-size:22px; display:block; margin-bottom:4px; }
+    .photo-btn-label { font-size:11px; color:var(--muted); font-weight:600; }
+    .photo-preview { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+    .photo-thumb-wrap { position:relative; }
+    .photo-thumb { width:72px; height:54px; object-fit:cover; border-radius:4px; border:1px solid var(--border); display:block; }
+    .photo-remove { position:absolute; top:-5px; right:-5px; background:var(--danger); color:#fff; border:none; border-radius:50%; width:18px; height:18px; font-size:11px; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+
+    /* ── TABLE ── */
+    .table-wrap { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+    table { width:100%; border-collapse:collapse; font-size:13px; }
+    th { background:var(--bg); padding:8px 10px; text-align:left; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.5px; color:var(--muted); border-bottom:2px solid var(--border); white-space:nowrap; }
+    td { padding:8px 10px; border-bottom:1px solid var(--border); vertical-align:middle; }
+    tr:last-child td { border-bottom:none; }
+    tr:hover td { background:var(--accent-light); }
+
+    /* ── BADGE ── */
+    .badge { display:inline-block; padding:2px 8px; border-radius:20px; font-size:11px; font-weight:600; white-space:nowrap; }
+    .cat-0{background:#dbeafe;color:#1d4ed8} .cat-1{background:#dcfce7;color:#15803d}
+    .cat-2{background:#fef9c3;color:#a16207} .cat-3{background:#fee2e2;color:#b91c1c}
+    .cat-4{background:#f3e8ff;color:#7e22ce} .cat-5{background:#ffedd5;color:#c2410c}
+    .cat-6{background:#e0f2fe;color:#0369a1}
+    .person-me{background:#dbeafe;color:#1e40af}
+    .person-wife{background:#fce7f3;color:#9d174d}
+
+    /* ── STATS ── */
+    .stats-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:10px; margin-bottom:16px; }
+    .stat-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:14px; box-shadow:var(--shadow); }
+    .stat-label { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.5px; color:var(--muted); margin-bottom:4px; }
+    .stat-value { font-size:26px; font-weight:800; color:var(--accent); line-height:1; }
+    .stat-sub { font-size:11px; color:var(--muted); margin-top:3px; }
+
+    /* ── LOG STATS BAR ── */
+    .log-stats-bar { display:grid; grid-template-columns:auto 1fr 1fr 1fr; gap:10px; align-items:center; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:12px 14px; margin-bottom:14px; box-shadow:var(--shadow); }
+    .log-stat { text-align:center; }
+    .log-stat-value { font-size:22px; font-weight:800; line-height:1; }
+    .log-stat-label { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.4px; color:var(--muted); margin-top:2px; }
+    .log-stat-sub { font-size:10px; color:var(--muted); }
+
+    /* ── PROGRESS ── */
+    .progress-wrap { margin-bottom:8px; }
+    .progress-label { display:flex; justify-content:space-between; font-size:12px; margin-bottom:3px; }
+    .progress-bar { height:8px; background:var(--border); border-radius:4px; overflow:hidden; }
+    .progress-fill { height:100%; border-radius:4px; background:var(--accent); transition:width .4s; }
+    .progress-fill.warning { background:var(--warning); }
+    .progress-fill.success { background:var(--success); }
+
+    /* ── FILTER ROW ── */
+    .filter-row { display:flex; flex-wrap:wrap; gap:8px; align-items:flex-end; margin-bottom:14px; }
+    .filter-row .form-group { margin:0; min-width:120px; }
+    .filter-row input, .filter-row select { padding:7px 8px; font-size:12px; }
+
+    /* ── EMPTY ── */
+    .empty { text-align:center; padding:40px 24px; color:var(--muted); }
+    .empty-icon { font-size:36px; margin-bottom:10px; }
+
+    /* ── MODAL ── */
+    .modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:200; align-items:flex-end; justify-content:center; }
+    .modal-overlay.open { display:flex; }
+    @media (min-width:640px) { .modal-overlay { align-items:center; } }
+    .modal { background:var(--surface); border-radius:12px 12px 0 0; padding:20px; width:100%; max-height:92vh; max-height:92dvh; overflow-y:auto; -webkit-overflow-scrolling:touch; box-shadow:0 -4px 32px rgba(0,0,0,.2); }
+    @media (min-width:640px) { .modal { border-radius:12px; max-width:580px; } }
+    .modal-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+    .modal-title { font-size:15px; font-weight:700; }
+    .modal-close { background:none; border:none; font-size:22px; cursor:pointer; color:var(--muted); line-height:1; padding:4px; }
+
+    /* ── PROPERTY CHIPS ── */
+    .property-chips { display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
+    .property-chip { padding:4px 12px; border-radius:20px; font-size:12px; font-weight:600; background:var(--bg); border:1px solid var(--border); cursor:pointer; }
+    .property-chip.remove { background:#fee2e2; border-color:#fca5a5; color:var(--danger); }
+
+    /* ── ADMIN PANEL ── */
+    .user-row { display:flex; align-items:center; justify-content:space-between; padding:10px 0; border-bottom:1px solid var(--border); }
+    .user-row:last-child { border-bottom:none; }
+    .user-email { font-size:13px; font-weight:600; }
+    .user-meta { font-size:11px; color:var(--muted); }
+    .request-row { display:flex; align-items:center; justify-content:space-between; padding:10px 0; border-bottom:1px solid var(--border); gap:10px; }
+    .request-row:last-child { border-bottom:none; }
+    .request-actions { display:flex; gap:6px; flex-shrink:0; }
+    .admin-section-title { font-size:13px; font-weight:700; margin:16px 0 10px; }
+    .admin-section-title:first-child { margin-top:0; }
+    .badge-pending { background:#fef9c3; color:#a16207; }
+    .badge-approved { background:#dcfce7; color:#15803d; }
+    .badge-denied { background:#fee2e2; color:#b91c1c; }
+
+    /* ── SPINNER ── */
+    .spinner { display:inline-block; width:18px; height:18px; border:2px solid rgba(255,255,255,.4); border-top-color:#fff; border-radius:50%; animation:spin .6s linear infinite; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+
+    /* ── TOAST ── */
+    #toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:#1a1e27; color:#fff; padding:10px 20px; border-radius:24px; font-size:13px; font-weight:600; z-index:999; opacity:0; transition:opacity .2s; pointer-events:none; white-space:nowrap; }
+    #toast.show { opacity:1; }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width:600px) {
+      .form-grid { grid-template-columns:1fr; }
+      .stats-grid { grid-template-columns:repeat(2,1fr); }
+      .log-stats-bar { grid-template-columns:1fr 1fr; }
+      .log-stats-bar > div:first-child { grid-column:1/-1; }
+      header .btn-header:not(.always-show) { display:none; }
+      .tab-btn { font-size:11px; padding:9px 2px; }
+      .header-banner { max-width:40%; }
+    }
+    @media (max-width:400px) {
+      .auth-card { padding:24px 16px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ══════════════ AUTH SCREEN ══════════════ -->
+<div id="auth-screen">
+  <div class="auth-card">
+    <div class="auth-logo">STR Tracker</div>
+    <div class="auth-sub">Material Participation Log</div>
+
+    <div class="auth-tabs">
+      <button class="auth-tab active" onclick="authTab('login')">Sign In</button>
+      <button class="auth-tab" onclick="authTab('request')">Request Access</button>
+    </div>
+
+    <form id="login-form" class="auth-form active" onsubmit="doLogin(event)">
+      <div class="auth-error" id="login-error"></div>
+      <input type="email" id="login-email" placeholder="Email address" required autocomplete="email" />
+      <input type="password" id="login-password" placeholder="Password" required autocomplete="current-password" />
+      <button type="submit" class="btn btn-primary btn-full" id="login-btn">Sign In</button>
+      <button type="button" class="btn btn-ghost btn-full" onclick="doForgot()" style="font-size:12px;">Forgot password?</button>
+    </form>
+
+    <form id="request-form" class="auth-form" onsubmit="doRequestAccess(event)">
+      <div class="auth-error" id="request-error"></div>
+      <div class="auth-success" id="request-success"></div>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:2px;">Don't have an account? Submit a request and the administrator will review it. You'll receive an email with a link to set your password once approved.</p>
+      <input type="text" id="req-name" placeholder="Your full name" required autocomplete="name" />
+      <input type="email" id="req-email" placeholder="Email address" required autocomplete="email" />
+      <textarea id="req-reason" placeholder="Why do you need access? (optional)" style="padding:10px 12px;border:1px solid var(--border);border-radius:6px;font-size:14px;resize:vertical;min-height:70px;font-family:inherit;"></textarea>
+      <button type="submit" class="btn btn-primary btn-full" id="request-btn">Submit Request</button>
+    </form>
+  </div>
+</div>
+
+<!-- ══════════════ MAIN APP ══════════════ -->
+<div id="main-app" style="display:none;">
+
+  <header>
+    <img src="banner.png" alt="STR Loophole Tracker" class="header-banner" />
+    <div class="header-left">
+      <span class="header-title">STR Hours Tracker</span>
+    </div>
+    <div class="header-actions">
+      <button class="btn btn-ghost btn-sm btn-header always-show" onclick="exportCSV()">⬇ CSV</button>
+      <button class="btn btn-ghost btn-sm btn-header always-show" onclick="openImport()">⬆ Import</button>
+      <button class="btn btn-ghost btn-sm btn-header" id="admin-btn" onclick="openAdmin()" style="display:none;">👑 Admin</button>
+      <button class="btn btn-ghost btn-sm btn-header always-show" onclick="openSettings()">⚙</button>
+      <button class="btn btn-ghost btn-sm btn-header always-show" onclick="doSignOut()">Sign Out</button>
+    </div>
+  </header>
+
+  <div class="app">
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchTab('log')">Dashboard</button>
+      <button class="tab-btn" onclick="switchTab('entries')">Activity Log</button>
+      <button class="tab-btn" onclick="switchTab('summary')">Summary</button>
+    </div>
+
+    <!-- ── DASHBOARD TAB ── -->
+    <div id="tab-log" class="tab-panel active">
+
+      <div class="log-stats-bar" id="log-stats-bar">
+        <div style="display:flex;flex-direction:column;gap:4px;">
+          <label style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);">Property</label>
+          <select id="log-stats-property" onchange="renderLogStats()" style="font-size:12px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);">
+            <option value="">All Properties</option>
+          </select>
+        </div>
+        <div class="log-stat" style="border-left:1px solid var(--border);padding-left:12px;">
+          <div class="log-stat-value" id="ls-total" style="color:var(--accent);">0</div>
+          <div class="log-stat-label">Total Hours</div>
+          <div class="log-stat-sub" id="ls-total-sub">0 sessions</div>
+        </div>
+        <div class="log-stat" style="border-left:1px solid var(--border);padding-left:12px;">
+          <div class="log-stat-value" id="ls-me" style="color:#1d4ed8;">0</div>
+          <div class="log-stat-label" id="ls-me-label">Person 1</div>
+          <div class="log-stat-sub" id="ls-me-sub">0 min</div>
+        </div>
+        <div class="log-stat" style="border-left:1px solid var(--border);padding-left:12px;">
+          <div class="log-stat-value" id="ls-wife" style="color:#9d174d;">0</div>
+          <div class="log-stat-label" id="ls-wife-label">Person 2</div>
+          <div class="log-stat-sub" id="ls-wife-sub">0 min</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Record a Work Session</div>
+
+        <div class="form-group" style="margin-bottom:14px;">
+          <label>Who worked?</label>
+          <div class="person-toggle">
+            <button id="person-me" class="active" onclick="setPerson('me')">👤 Me</button>
+            <button id="person-wife" onclick="setPerson('wife')">👤 My Partner</button>
+          </div>
+          <div class="person-both-hint" id="person-both-hint" style="display:none;">Both selected — 2 entries will be saved</div>
+        </div>
+
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Date</label>
+            <input type="date" id="entry-date" />
+          </div>
+          <div class="form-group">
+            <label>Start Time</label>
+            <input type="time" id="entry-start-time" oninput="calcDuration()" />
+          </div>
+          <div class="form-group">
+            <label>Stop Time</label>
+            <input type="time" id="entry-stop-time" oninput="calcDuration()" />
+          </div>
+          <div class="form-group">
+            <label>Duration <span id="duration-source" style="font-weight:400;text-transform:none;color:var(--accent);font-size:10px;"></span></label>
+            <div class="duration-row">
+              <input type="number" id="entry-duration-val" min="1" max="999" placeholder="60" oninput="onManualDuration()" />
+              <select id="entry-duration-unit" onchange="onManualDuration()">
+                <option value="minutes">Minutes</option>
+                <option value="hours">Hours</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Property</label>
+            <select id="entry-property"><option value="">— Select —</option></select>
+          </div>
+          <div class="form-group">
+            <label>Category</label>
+            <select id="entry-category">
+              <option value="">— Select —</option>
+              <option value="0">💬 Guest Management</option>
+              <option value="1">💰 Pricing &amp; Listing</option>
+              <option value="2">🧹 Cleaning &amp; Turnover</option>
+              <option value="3">🔧 Maintenance &amp; Repairs</option>
+              <option value="4">🛒 Supplies &amp; Inventory</option>
+              <option value="5">📋 Bookkeeping &amp; Admin</option>
+              <option value="6">📣 Marketing &amp; Advertising</option>
+            </select>
+          </div>
+          <div class="form-group full">
+            <label>Description of Work</label>
+            <textarea id="entry-desc" placeholder="Describe what was done…"></textarea>
+          </div>
+          <div class="form-group full">
+            <label>Evidence (notes / links)</label>
+            <textarea id="entry-evidence-text" placeholder="e.g. Screenshot in Google Drive, invoice #123…" style="min-height:50px;"></textarea>
+          </div>
+          <div class="form-group full">
+            <label>Evidence Photos</label>
+            <div class="photo-zone">
+              <div class="photo-btn">
+                <input type="file" accept="image/*" multiple onchange="handlePhotos(this)" />
+                <span class="photo-btn-icon">🖼</span>
+                <span class="photo-btn-label">Upload / Drag</span>
+              </div>
+              <div class="photo-btn">
+                <input type="file" accept="image/*" capture="environment" onchange="handlePhotos(this)" />
+                <span class="photo-btn-icon">📷</span>
+                <span class="photo-btn-label">Take Photo</span>
+              </div>
+            </div>
+            <div class="photo-preview" id="photo-preview"></div>
+          </div>
+        </div>
+
+        <div style="margin-top:16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+          <button class="btn btn-primary" onclick="saveEntry()" id="save-btn">Save Entry</button>
+          <button class="btn btn-ghost" onclick="clearForm()">Clear</button>
+          <span id="form-msg" style="font-size:12px;color:var(--success);"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── ACTIVITY LOG TAB ── -->
+    <div id="tab-entries" class="tab-panel">
+      <div class="card">
+        <div class="card-title">Activity Log</div>
+        <div class="filter-row">
+          <div class="form-group">
+            <label>Person</label>
+            <select id="filter-person" onchange="renderEntries()">
+              <option value="">Both</option>
+              <option value="me">Person 1</option>
+              <option value="wife">Person 2</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Property</label>
+            <select id="filter-property" onchange="renderEntries()"><option value="">All</option></select>
+          </div>
+          <div class="form-group">
+            <label>Category</label>
+            <select id="filter-category" onchange="renderEntries()">
+              <option value="">All</option>
+              <option value="0">Guest Mgmt</option>
+              <option value="1">Pricing</option>
+              <option value="2">Cleaning</option>
+              <option value="3">Maintenance</option>
+              <option value="4">Supplies</option>
+              <option value="5">Bookkeeping</option>
+              <option value="6">Marketing</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>From</label>
+            <input type="date" id="filter-from" onchange="renderEntries()" />
+          </div>
+          <div class="form-group">
+            <label>To</label>
+            <input type="date" id="filter-to" onchange="renderEntries()" />
+          </div>
+          <button class="btn btn-ghost btn-sm" style="align-self:flex-end;" onclick="clearFilters()">Clear</button>
+        </div>
+        <div class="table-wrap" id="entries-table-wrap"></div>
+      </div>
+    </div>
+
+    <!-- ── SUMMARY TAB ── -->
+    <div id="tab-summary" class="tab-panel">
+      <div class="stats-grid" id="stats-grid"></div>
+      <div class="card" style="margin-bottom:12px;">
+        <div class="card-title">Material Participation (100h / 500h Test)</div>
+        <div id="mp-progress"></div>
+        <div id="mp-bar-chart" style="margin-top:16px;"></div>
+      </div>
+      <div class="card" style="margin-bottom:12px;">
+        <div class="card-title">Hours by Category</div>
+        <div id="cat-breakdown"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Hours by Property</div>
+        <div id="prop-breakdown"></div>
+      </div>
+    </div>
+
+  </div><!-- /app -->
+</div><!-- /main-app -->
+
+<!-- ══════ EDIT MODAL ══════ -->
+<div class="modal-overlay" id="edit-modal">
+  <div class="modal" style="max-width:600px;">
+    <div class="modal-header">
+      <div class="modal-title">Edit Entry</div>
+      <button class="modal-close" onclick="closeEdit()">×</button>
+    </div>
+    <div class="form-group" style="margin-bottom:14px;">
+      <label>Who worked?</label>
+      <div class="person-toggle">
+        <button id="edit-person-me" onclick="setEditPerson('me')">👤 Me</button>
+        <button id="edit-person-wife" onclick="setEditPerson('wife')">👤 My Partner</button>
+      </div>
+    </div>
+    <div class="form-grid">
+      <div class="form-group"><label>Date</label><input type="date" id="edit-date" /></div>
+      <div class="form-group"><label>Start Time</label><input type="time" id="edit-start-time" oninput="calcEditDuration()" /></div>
+      <div class="form-group"><label>Stop Time</label><input type="time" id="edit-stop-time" oninput="calcEditDuration()" /></div>
+      <div class="form-group">
+        <label>Duration <span id="edit-duration-source" style="font-weight:400;text-transform:none;color:var(--accent);font-size:10px;"></span></label>
+        <div class="duration-row">
+          <input type="number" id="edit-duration-val" min="1" max="999" oninput="onEditManualDuration()" />
+          <select id="edit-duration-unit" onchange="onEditManualDuration()"><option value="minutes">Min</option><option value="hours">Hrs</option></select>
+        </div>
+      </div>
+      <div class="form-group"><label>Property</label><select id="edit-property"><option value="">— Select —</option></select></div>
+      <div class="form-group">
+        <label>Category</label>
+        <select id="edit-category">
+          <option value="">— Select —</option>
+          <option value="0">💬 Guest Management</option>
+          <option value="1">💰 Pricing &amp; Listing</option>
+          <option value="2">🧹 Cleaning &amp; Turnover</option>
+          <option value="3">🔧 Maintenance &amp; Repairs</option>
+          <option value="4">🛒 Supplies &amp; Inventory</option>
+          <option value="5">📋 Bookkeeping &amp; Admin</option>
+          <option value="6">📣 Marketing &amp; Advertising</option>
+        </select>
+      </div>
+      <div class="form-group full"><label>Description</label><textarea id="edit-desc"></textarea></div>
+      <div class="form-group full"><label>Evidence Notes</label><textarea id="edit-evidence-text" style="min-height:50px;"></textarea></div>
+      <div class="form-group full">
+        <label>Evidence Photos</label>
+        <div class="photo-zone">
+          <div class="photo-btn">
+            <input type="file" accept="image/*" multiple onchange="handleEditPhotos(this)" />
+            <span class="photo-btn-icon">🖼</span>
+            <span class="photo-btn-label">Upload / Drag</span>
+          </div>
+          <div class="photo-btn">
+            <input type="file" accept="image/*" capture="environment" onchange="handleEditPhotos(this)" />
+            <span class="photo-btn-icon">📷</span>
+            <span class="photo-btn-label">Take Photo</span>
+          </div>
+        </div>
+        <div class="photo-preview" id="edit-photo-preview"></div>
+      </div>
+    </div>
+    <div style="margin-top:16px;display:flex;justify-content:flex-end;gap:10px;">
+      <button class="btn btn-ghost" onclick="closeEdit()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveEdit()" id="edit-save-btn">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ DETAIL MODAL ══════ -->
+<div class="modal-overlay" id="detail-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Entry Detail</div>
+      <button class="modal-close" onclick="closeDetail()">×</button>
+    </div>
+    <div id="detail-body"></div>
+  </div>
+</div>
+
+
+<!-- ══════ IMPORT MODAL ══════ -->
+<div class="modal-overlay" id="import-modal">
+  <div class="modal" style="max-width:640px;">
+    <div class="modal-header">
+      <div class="modal-title">Import from CSV</div>
+      <button class="modal-close" onclick="closeImport()">×</button>
+    </div>
+
+    <!-- Step 1: file pick -->
+    <div id="import-step-1">
+      <p style="font-size:13px;color:var(--muted);margin-bottom:14px;">
+        Select a CSV file. The first row must be a header. You'll map your columns to the app's fields on the next step.
+      </p>
+      <div class="photo-btn" style="max-width:100%;margin-bottom:0;">
+        <input type="file" id="import-file-input" accept=".csv,text/csv" onchange="importFileChosen(this)" />
+        <span class="photo-btn-icon">📂</span>
+        <span class="photo-btn-label">Choose CSV file</span>
+      </div>
+      <p id="import-file-name" style="font-size:12px;color:var(--muted);margin-top:8px;"></p>
+    </div>
+
+    <!-- Step 2: column mapping -->
+    <div id="import-step-2" style="display:none;">
+      <p style="font-size:13px;font-weight:700;margin-bottom:10px;">Map your columns</p>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:14px;">Match each required field to the column in your file. Optional fields can be left as "— skip —".</p>
+      <div id="import-mapping-grid" style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px;"></div>
+      <div id="import-preview-wrap" style="margin-bottom:16px;display:none;">
+        <p style="font-size:12px;font-weight:700;margin-bottom:6px;">Preview (first 3 rows)</p>
+        <div class="table-wrap"><table id="import-preview-table" style="font-size:12px;"></table></div>
+      </div>
+      <p id="import-map-error" style="font-size:12px;color:var(--danger);margin-bottom:10px;display:none;"></p>
+      <div style="display:flex;gap:10px;justify-content:flex-end;">
+        <button class="btn btn-ghost" onclick="importBack()">Back</button>
+        <button class="btn btn-primary" onclick="importPreview()">Preview</button>
+      </div>
+    </div>
+
+    <!-- Step 3: confirm -->
+    <div id="import-step-3" style="display:none;">
+      <p id="import-confirm-msg" style="font-size:13px;margin-bottom:14px;"></p>
+      <div id="import-errors-wrap" style="margin-bottom:12px;"></div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;">
+        <button class="btn btn-ghost" onclick="importBack2()">Back</button>
+        <button class="btn btn-primary" id="import-confirm-btn" onclick="importConfirm()">Import</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ══════ SETTINGS MODAL ══════ -->
+<div class="modal-overlay" id="settings-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Settings</div>
+      <button class="modal-close" onclick="closeSettings()">×</button>
+    </div>
+    <div style="font-size:13px;font-weight:700;margin-bottom:10px;">Person Names</div>
+    <div class="form-grid" style="margin-bottom:20px;">
+      <div class="form-group"><label>Your Name</label><input type="text" id="setting-me-name" placeholder="e.g. John" /></div>
+      <div class="form-group"><label>Partner's Name</label><input type="text" id="setting-wife-name" placeholder="e.g. Jane" /></div>
+    </div>
+    <div style="font-size:13px;font-weight:700;margin-bottom:10px;">Properties</div>
+    <div style="display:flex;gap:8px;margin-bottom:10px;">
+      <input type="text" id="new-property" placeholder="Property name or address" style="flex:1;" />
+      <button class="btn btn-primary btn-sm" onclick="addProperty()">Add</button>
+    </div>
+    <div class="property-chips" id="property-chips-list"></div>
+    <div class="form-group" style="margin-top:20px;">
+      <label>Tax Year</label>
+      <select id="setting-year">
+        <option value="2023">2023</option><option value="2024">2024</option>
+        <option value="2025" selected>2025</option><option value="2026">2026</option>
+      </select>
+    </div>
+    <div style="margin-top:24px;display:flex;justify-content:flex-end;gap:10px;">
+      <button class="btn btn-ghost" onclick="closeSettings()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveSettings()">Save Settings</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ ADMIN MODAL ══════ -->
+<div class="modal-overlay" id="admin-modal">
+  <div class="modal" style="max-width:620px;">
+    <div class="modal-header">
+      <div class="modal-title">👑 Admin Panel</div>
+      <button class="modal-close" onclick="closeAdmin()">×</button>
+    </div>
+    <div class="admin-section-title">➕ Add New User</div>
+    <div class="form-grid" style="margin-bottom:6px;">
+      <div class="form-group">
+        <label>Name</label>
+        <input type="text" id="new-user-name" placeholder="Full name" autocomplete="off" />
+      </div>
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="new-user-email" placeholder="Email address" autocomplete="off" />
+      </div>
+      <div class="form-group full">
+        <label>Default Password</label>
+        <input type="text" id="new-user-password" placeholder="At least 6 characters" autocomplete="off" />
+      </div>
+    </div>
+    <button class="btn btn-primary btn-full" id="new-user-btn" onclick="createNewUser()">Create User</button>
+    <div id="new-user-msg" style="font-size:12px;margin-top:6px;"></div>
+
+    <div class="admin-section-title" style="margin-top:20px;">⏳ Pending Access Requests</div>
+    <div id="admin-requests-list"><div style="color:var(--muted);font-size:13px;">Loading…</div></div>
+    <div class="admin-section-title" style="margin-top:20px;">👥 Registered Users</div>
+    <div id="admin-users-list"><div style="color:var(--muted);font-size:13px;">Loading…</div></div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<!-- ══════════════════════════════════════════════════
+     FIREBASE SDK
+══════════════════════════════════════════════════ -->
+<script type="module">
+import { initializeApp }          from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
+import { getAuth, signInWithEmailAndPassword,
+         signOut, onAuthStateChanged, sendPasswordResetEmail }
+  from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
+import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc,
+         collection, getDocs, addDoc, query, orderBy, where, onSnapshot,
+         serverTimestamp, writeBatch }
+  from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+import { getStorage, ref as storageRef, uploadString, getDownloadURL, deleteObject }
+  from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js';
+import { getFunctions, httpsCallable }
+  from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-functions.js';
+
+/* ── FIREBASE CONFIG ─────────────────────────────────
+   Lives in firebase-config.js (not committed to git).
+   Copy firebase-config.example.js to firebase-config.js and fill in your values.
+──────────────────────────────────────────────────── */
+import { firebaseConfig } from './firebase-config.js';
+
+const app       = initializeApp(firebaseConfig);
+const auth      = getAuth(app);
+const db        = getFirestore(app);
+const storage   = getStorage(app);
+const functions = getFunctions(app);
+
+/* ═══════════════════════════════════════════
+   CONSTANTS
+═══════════════════════════════════════════ */
+const CATEGORIES = [
+  'Guest Management','Pricing & Listing Optimization','Cleaning & Turnover Coordination',
+  'Maintenance & Repairs','Supplies & Inventory','Bookkeeping & Administration','Marketing & Advertising'
+];
+const CAT_ICONS = ['💬','💰','🧹','🔧','🛒','📋','📣'];
+
+/* ═══════════════════════════════════════════
+   STATE
+═══════════════════════════════════════════ */
+let currentUser   = null;
+let userProfile   = { meName:'Me', wifeName:'My Partner', properties:[], year:'2025' };
+let allEntries    = [];
+let isAdmin       = false;
+let selectedPersons = new Set(['me']);
+let pendingPhotos = [];
+let editingId        = null;
+let editPendingPhotos = []; // {name, dataUrl} — new photos added during edit
+let editExistingURLs  = []; // existing Firebase Storage URLs kept from original entry
+let unsubEntries  = null;
+
+/* ═══════════════════════════════════════════
+   AUTH UI
+═══════════════════════════════════════════ */
+window.authTab = (tab) => {
+  document.querySelectorAll('.auth-tab').forEach((b,i) => b.classList.toggle('active', ['login','request'][i] === tab));
+  document.getElementById('login-form').classList.toggle('active', tab === 'login');
+  document.getElementById('request-form').classList.toggle('active', tab === 'request');
+};
+
+window.doLogin = async (e) => {
+  e.preventDefault();
+  const errEl = document.getElementById('login-error');
+  errEl.classList.remove('show');
+  const btn = document.getElementById('login-btn');
+  btn.innerHTML = '<span class="spinner"></span>';
+  try {
+    const cred = await signInWithEmailAndPassword(auth,
+      document.getElementById('login-email').value.trim(),
+      document.getElementById('login-password').value
+    );
+    // Check if admin has disabled this account
+    const snap = await getDoc(doc(db, 'users', cred.user.uid));
+    if (snap.exists() && snap.data().disabled === true) {
+      await signOut(auth);
+      errEl.textContent = 'Your account has been disabled. Please contact the administrator.';
+      errEl.classList.add('show');
+      btn.textContent = 'Sign In';
+      return;
+    }
+  } catch(err) {
+    errEl.textContent = friendlyAuthError(err.code);
+    errEl.classList.add('show');
+    btn.textContent = 'Sign In';
+  }
+};
+
+window.doRequestAccess = async (e) => {
+  e.preventDefault();
+  const errEl  = document.getElementById('request-error');
+  const succEl = document.getElementById('request-success');
+  errEl.classList.remove('show');
+  succEl.classList.remove('show');
+  const btn    = document.getElementById('request-btn');
+  btn.innerHTML = '<span class="spinner"></span>';
+  const name   = document.getElementById('req-name').value.trim();
+  const email  = document.getElementById('req-email').value.trim();
+  const reason = document.getElementById('req-reason').value.trim();
+  try {
+    // Handled server-side (Firestore rules don't let visitors read existing requests):
+    // existing account → password link is re-sent; otherwise a new request is saved.
+    const submit = httpsCallable(functions, 'submitAccessRequest');
+    const { data } = await submit({ name, email, reason });
+    // Reset form and show success
+    document.getElementById('req-name').value   = '';
+    document.getElementById('req-email').value  = '';
+    document.getElementById('req-reason').value = '';
+    succEl.textContent =
+      data.status === 'link_resent'     ? '✓ An account already exists for this email. We\'ve re-sent the link to set your password — check your inbox (and spam).'
+    : data.status === 'already_pending' ? '✓ Your request is already waiting for approval. You\'ll get an email once the administrator approves it.'
+    :                                     '✓ Request submitted! You will receive an email once the administrator approves your account.';
+    succEl.classList.add('show');
+    btn.textContent = 'Submit Request';
+  } catch(err) {
+    console.error('Request error:', err);
+    errEl.textContent = (err.code === 'functions/invalid-argument' && err.message)
+      ? err.message
+      : 'Failed to submit request. Please try again.';
+    errEl.classList.add('show');
+    btn.textContent = 'Submit Request';
+  }
+};
+
+window.doForgot = async () => {
+  const email = document.getElementById('login-email').value.trim();
+  if (!email) { alert('Enter your email address first.'); return; }
+  try {
+    await sendPasswordResetEmail(auth, email);
+    showToast('Password reset email sent!');
+  } catch(err) {
+    alert(friendlyAuthError(err.code));
+  }
+};
+
+window.doSignOut = async () => {
+  if (unsubEntries) { unsubEntries(); unsubEntries = null; }
+  await signOut(auth);
+};
+
+function friendlyAuthError(code) {
+  const map = {
+    'auth/user-not-found':'No account with that email.',
+    'auth/wrong-password':'Incorrect password.',
+    'auth/email-already-in-use':'An account with this email already exists.',
+    'auth/weak-password':'Password must be at least 6 characters.',
+    'auth/invalid-email':'Please enter a valid email address.',
+    'auth/too-many-requests':'Too many attempts. Try again later.',
+    'auth/invalid-credential':'Invalid email or password.',
+  };
+  return map[code] || 'An error occurred. Please try again.';
+}
+
+/* ═══════════════════════════════════════════
+   AUTH STATE
+═══════════════════════════════════════════ */
+onAuthStateChanged(auth, async (user) => {
+  if (user) {
+    currentUser = user;
+    await loadUserProfile();
+    startEntriesListener();
+    showApp();
+  } else {
+    currentUser = null;
+    allEntries  = [];
+    if (unsubEntries) { unsubEntries(); unsubEntries = null; }
+    showAuth();
+  }
+});
+
+async function loadUserProfile() {
+  const snap = await getDoc(doc(db,'users',currentUser.uid));
+  if (snap.exists()) {
+    const d = snap.data();
+    userProfile = {
+      meName:     d.meName     || d.name || 'Me',
+      wifeName:   d.wifeName   || 'My Partner',
+      properties: d.properties || [],
+      year:       d.year       || '2025'
+    };
+    isAdmin = !!d.admin;
+  }
+}
+
+function showApp() {
+  document.getElementById('auth-screen').style.display = 'none';
+  document.getElementById('main-app').style.display = 'block';
+  document.getElementById('admin-btn').style.display = isAdmin ? '' : 'none';
+  refreshPersonButtons();
+  refreshPropertyDropdowns();
+  renderLogStats();
+  renderEntries();
+  renderSummary();
+  setTodayDate();
+}
+
+function showAuth() {
+  document.getElementById('auth-screen').style.display = 'flex';
+  document.getElementById('main-app').style.display = 'none';
+  document.getElementById('login-btn').textContent = 'Sign In';
+  document.getElementById('request-btn').textContent = 'Submit Request';
+  document.getElementById('request-error').classList.remove('show');
+  document.getElementById('request-success').classList.remove('show');
+}
+
+/* ═══════════════════════════════════════════
+   FIRESTORE: ENTRIES LISTENER
+═══════════════════════════════════════════ */
+function startEntriesListener() {
+  const q = query(
+    collection(db,'users',currentUser.uid,'entries'),
+    orderBy('date','desc')
+  );
+  unsubEntries = onSnapshot(q, (snap) => {
+    allEntries = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderEntries();
+    renderSummary();
+    renderLogStats();
+  });
+}
+
+/* ═══════════════════════════════════════════
+   PERSON TOGGLE
+═══════════════════════════════════════════ */
+window.setPerson = (p) => {
+  if (selectedPersons.has(p) && selectedPersons.size > 1) selectedPersons.delete(p);
+  else { if (selectedPersons.has(p) && selectedPersons.size === 1) return; selectedPersons.add(p); }
+  refreshPersonButtons();
+};
+
+function refreshPersonButtons() {
+  const meBtn   = document.getElementById('person-me');
+  const wifeBtn = document.getElementById('person-wife');
+  const hint    = document.getElementById('person-both-hint');
+  meBtn.textContent  = '👤 ' + userProfile.meName;
+  wifeBtn.textContent = '👤 ' + userProfile.wifeName;
+  meBtn.classList.toggle('active', selectedPersons.has('me'));
+  wifeBtn.classList.remove('active','active-wife');
+  if (selectedPersons.has('wife')) wifeBtn.classList.add('active-wife');
+  hint.style.display = selectedPersons.size === 2 ? '' : 'none';
+}
+
+/* ═══════════════════════════════════════════
+   PROPERTY DROPDOWNS
+═══════════════════════════════════════════ */
+function refreshPropertyDropdowns() {
+  const onlyOne = userProfile.properties.length === 1 ? userProfile.properties[0] : null;
+  ['entry-property','filter-property','log-stats-property','edit-property'].forEach(id => {
+    const sel = document.getElementById(id);
+    if (!sel) return;
+    const cur = sel.value;
+    while (sel.options.length > 1) sel.remove(1);
+    userProfile.properties.forEach(p => sel.add(new Option(p,p)));
+    if (userProfile.properties.includes(cur)) {
+      sel.value = cur;
+    } else if (onlyOne && (id === 'entry-property' || id === 'edit-property')) {
+      sel.value = onlyOne;
+    }
+  });
+}
+
+/* ═══════════════════════════════════════════
+   PHOTO HANDLING
+═══════════════════════════════════════════ */
+const MAX_PX   = 1200;  // longest edge
+const JPEG_Q   = 0.80;  // JPEG quality (0–1)
+
+function resizeImage(dataUrl) {
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => {
+      let { width: w, height: h } = img;
+      if (w > MAX_PX || h > MAX_PX) {
+        if (w >= h) { h = Math.round(h * MAX_PX / w); w = MAX_PX; }
+        else        { w = Math.round(w * MAX_PX / h); h = MAX_PX; }
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      resolve(canvas.toDataURL('image/jpeg', JPEG_Q));
+    };
+    img.src = dataUrl;
+  });
+}
+
+window.handlePhotos = (input) => {
+  Array.from(input.files).forEach(f => {
+    const reader = new FileReader();
+    reader.onload = async e => {
+      const dataUrl = await resizeImage(e.target.result);
+      pendingPhotos.push({ name: f.name.replace(/\.[^.]+$/, '.jpg'), dataUrl });
+      renderPreviews();
+    };
+    reader.readAsDataURL(f);
+  });
+  input.value = '';
+};
+
+function renderPreviews() {
+  const wrap = document.getElementById('photo-preview');
+  wrap.innerHTML = '';
+  pendingPhotos.forEach((ph,i) => {
+    const w = document.createElement('div');
+    w.className = 'photo-thumb-wrap';
+    w.innerHTML = `<img class="photo-thumb" src="${ph.dataUrl}" /><button class="photo-remove" onclick="removePhoto(${i})">×</button>`;
+    wrap.appendChild(w);
+  });
+}
+window.removePhoto = (i) => { pendingPhotos.splice(i,1); renderPreviews(); };
+
+window.handleEditPhotos = (input) => {
+  Array.from(input.files).forEach(f => {
+    const reader = new FileReader();
+    reader.onload = async e => {
+      const dataUrl = await resizeImage(e.target.result);
+      editPendingPhotos.push({ name: f.name.replace(/\.[^.]+$/, '.jpg'), dataUrl });
+      renderEditPreviews();
+    };
+    reader.readAsDataURL(f);
+  });
+  input.value = '';
+};
+
+window.removeEditExisting = (i) => { editExistingURLs.splice(i,1); renderEditPreviews(); };
+window.removeEditPending  = (i) => { editPendingPhotos.splice(i,1); renderEditPreviews(); };
+
+function renderEditPreviews() {
+  const wrap = document.getElementById('edit-photo-preview');
+  wrap.innerHTML = '';
+  editExistingURLs.forEach((url, i) => {
+    const w = document.createElement('div');
+    w.className = 'photo-thumb-wrap';
+    w.innerHTML = `<img class="photo-thumb" src="${url}" /><button class="photo-remove" onclick="removeEditExisting(${i})">×</button>`;
+    wrap.appendChild(w);
+  });
+  editPendingPhotos.forEach((ph, i) => {
+    const w = document.createElement('div');
+    w.className = 'photo-thumb-wrap';
+    w.innerHTML = `<img class="photo-thumb" src="${ph.dataUrl}" /><button class="photo-remove" onclick="removeEditPending(${i})">×</button>`;
+    wrap.appendChild(w);
+  });
+}
+
+/* ═══════════════════════════════════════════
+   DURATION CALC
+═══════════════════════════════════════════ */
+window.calcDuration = () => {
+  const start = document.getElementById('entry-start-time').value;
+  const stop  = document.getElementById('entry-stop-time').value;
+  if (!start || !stop) return;
+  const [sh,sm] = start.split(':').map(Number);
+  const [eh,em] = stop.split(':').map(Number);
+  let diff = (eh*60+em)-(sh*60+sm);
+  if (diff <= 0) diff += 24*60;
+  document.getElementById('entry-duration-val').value  = diff;
+  document.getElementById('entry-duration-unit').value = 'minutes';
+  document.getElementById('duration-source').textContent = '(calculated)';
+};
+window.onManualDuration = () => {
+  const start = document.getElementById('entry-start-time').value;
+  const stop  = document.getElementById('entry-stop-time').value;
+  if (start || stop) document.getElementById('duration-source').textContent = '(manual)';
+};
+
+/* ═══════════════════════════════════════════
+   DATE
+═══════════════════════════════════════════ */
+function setTodayDate() {
+  const el = document.getElementById('entry-date');
+  if (el) el.value = new Date().toISOString().split('T')[0];
+}
+
+/* ═══════════════════════════════════════════
+   SAVE ENTRY
+═══════════════════════════════════════════ */
+window.saveEntry = async () => {
+  const date         = document.getElementById('entry-date').value;
+  const durVal       = parseFloat(document.getElementById('entry-duration-val').value);
+  const durUnit      = document.getElementById('entry-duration-unit').value;
+  const startTime    = document.getElementById('entry-start-time').value;
+  const stopTime     = document.getElementById('entry-stop-time').value;
+  const property     = document.getElementById('entry-property').value;
+  const catIdx       = document.getElementById('entry-category').value;
+  const desc         = document.getElementById('entry-desc').value.trim();
+  const evidenceText = document.getElementById('entry-evidence-text').value.trim();
+
+  if (!date)               { alert('Please select a date.'); return; }
+  if (!durVal || durVal<=0){ alert('Please enter a duration or set start/stop times.'); return; }
+  if (!property)           { alert('Please select a property or add one through Settings.'); return; }
+  if (catIdx === '')       { alert('Please select a category.'); return; }
+  if (!desc)               { alert('Please enter a description.'); return; }
+
+  const minutes = durUnit === 'hours' ? Math.round(durVal*60) : Math.round(durVal);
+  const btn = document.getElementById('save-btn');
+  btn.innerHTML = '<span class="spinner"></span> Saving…';
+  btn.disabled = true;
+
+  try {
+    // Upload photos to Firebase Storage and get URLs
+    const photoURLs = await uploadPhotos(pendingPhotos);
+
+    const persons = [...selectedPersons];
+    const batch = writeBatch(db);
+    persons.forEach(person => {
+      const ref = doc(collection(db,'users',currentUser.uid,'entries'));
+      batch.set(ref, {
+        person, date, startTime, stopTime, minutes,
+        property, category: parseInt(catIdx),
+        description: desc, evidenceText, photoURLs,
+        createdAt: serverTimestamp()
+      });
+    });
+    await batch.commit();
+
+    showToast(persons.length === 2 ? '✓ 2 entries saved!' : '✓ Entry saved!');
+    clearForm();
+  } catch(err) {
+    alert('Error saving entry: ' + err.message);
+  } finally {
+    btn.textContent = 'Save Entry';
+    btn.disabled = false;
+  }
+};
+
+async function uploadPhotos(photos) {
+  const urls = [];
+  for (const ph of photos) {
+    const path = `users/${currentUser.uid}/photos/${Date.now()}_${ph.name}`;
+    const ref  = storageRef(storage, path);
+    await uploadString(ref, ph.dataUrl, 'data_url');
+    const url = await getDownloadURL(ref);
+    urls.push(url);
+  }
+  return urls;
+}
+
+window.clearForm = () => {
+  setTodayDate();
+  document.getElementById('entry-start-time').value   = '';
+  document.getElementById('entry-stop-time').value    = '';
+  document.getElementById('entry-duration-val').value = '';
+  document.getElementById('entry-duration-unit').value = 'minutes';
+  document.getElementById('duration-source').textContent = '';
+  document.getElementById('entry-desc').value          = '';
+  document.getElementById('entry-evidence-text').value = '';
+  document.getElementById('entry-category').value      = '';
+  document.getElementById('entry-property').value      = '';
+  pendingPhotos = [];
+  renderPreviews();
+};
+
+/* ═══════════════════════════════════════════
+   ENTRIES TABLE
+═══════════════════════════════════════════ */
+function getFilteredEntries() {
+  let list = allEntries.slice();
+  const person = document.getElementById('filter-person')?.value;
+  const prop   = document.getElementById('filter-property')?.value;
+  const cat    = document.getElementById('filter-category')?.value;
+  const from   = document.getElementById('filter-from')?.value;
+  const to     = document.getElementById('filter-to')?.value;
+  if (person) list = list.filter(e=>e.person===person);
+  if (prop)   list = list.filter(e=>e.property===prop);
+  if (cat)    list = list.filter(e=>String(e.category)===cat);
+  if (from)   list = list.filter(e=>e.date>=from);
+  if (to)     list = list.filter(e=>e.date<=to);
+  return list;
+}
+
+window.renderEntries = () => {
+  const wrap = document.getElementById('entries-table-wrap');
+  if (!wrap) return;
+  const list = getFilteredEntries();
+  if (!list.length) {
+    wrap.innerHTML = `<div class="empty"><div class="empty-icon">📋</div><p>No entries yet.</p></div>`;
+    return;
+  }
+  const rows = list.map(e => {
+    const hrs = (e.minutes/60).toFixed(1);
+    const pName = e.person==='me' ? userProfile.meName : userProfile.wifeName;
+    const hasEvidence = e.evidenceText || (e.photoURLs && e.photoURLs.length);
+    return `<tr onclick="showDetail('${e.id}')" style="cursor:pointer;">
+      <td style="white-space:nowrap;">${e.date}</td>
+      <td><span class="badge ${e.person==='me'?'person-me':'person-wife'}">${pName}</span></td>
+      <td style="max-width:100px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${e.property}</td>
+      <td><span class="badge cat-${e.category}">${CAT_ICONS[e.category]}</span></td>
+      <td style="max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${e.description}</td>
+      <td style="font-weight:600;white-space:nowrap;">${hrs}h</td>
+      <td style="font-size:11px;color:${hasEvidence?'var(--success)':'var(--muted)'};">${hasEvidence?'✓':'—'}</td>
+      <td style="white-space:nowrap;">
+        <button class="btn btn-ghost btn-sm" onclick="editEntry(event,'${e.id}')">✏</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteEntry(event,'${e.id}')">✕</button>
+      </td>
+    </tr>`;
+  }).join('');
+  wrap.innerHTML = `<table>
+    <thead><tr><th>Date</th><th>Person</th><th>Property</th><th>Cat</th><th>Description</th><th>Hrs</th><th>Ev.</th><th></th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table>`;
+};
+
+window.deleteEntry = async (event, id) => {
+  event.stopPropagation();
+  if (!confirm('Delete this entry?')) return;
+  await deleteDoc(doc(db,'users',currentUser.uid,'entries',id));
+  showToast('Entry deleted.');
+};
+
+window.clearFilters = () => {
+  ['filter-person','filter-property','filter-category'].forEach(id => document.getElementById(id).value='');
+  ['filter-from','filter-to'].forEach(id => document.getElementById(id).value='');
+  renderEntries();
+};
+
+/* ═══════════════════════════════════════════
+   DETAIL MODAL
+═══════════════════════════════════════════ */
+window.showDetail = (id) => {
+  const e = allEntries.find(x=>x.id===id);
+  if (!e) return;
+  const pName = e.person==='me' ? userProfile.meName : userProfile.wifeName;
+  const photos = (e.photoURLs||[]).map(url =>
+    `<img src="${url}" style="max-width:100%;border-radius:6px;margin-top:8px;border:1px solid var(--border);" />`
+  ).join('');
+  document.getElementById('detail-body').innerHTML = `
+    <table style="width:100%;font-size:13px;border-collapse:collapse;">
+      <tr><td style="padding:6px 0;color:var(--muted);width:110px;">Date</td><td><b>${e.date}</b></td></tr>
+      <tr><td style="padding:6px 0;color:var(--muted);">Person</td><td>${pName}</td></tr>
+      <tr><td style="padding:6px 0;color:var(--muted);">Property</td><td>${e.property}</td></tr>
+      <tr><td style="padding:6px 0;color:var(--muted);">Category</td><td><span class="badge cat-${e.category}">${CAT_ICONS[e.category]} ${CATEGORIES[e.category]}</span></td></tr>
+      <tr><td style="padding:6px 0;color:var(--muted);">Time</td><td>${e.startTime&&e.stopTime?e.startTime+' – '+e.stopTime:'—'}</td></tr>
+      <tr><td style="padding:6px 0;color:var(--muted);">Duration</td><td><b>${(e.minutes/60).toFixed(2)}h</b> (${e.minutes} min)</td></tr>
+      <tr><td style="padding:6px 0;color:var(--muted);vertical-align:top;">Description</td><td>${e.description}</td></tr>
+      <tr><td style="padding:6px 0;color:var(--muted);vertical-align:top;">Evidence</td><td>${e.evidenceText||'—'}</td></tr>
+    </table>
+    ${photos?'<div style="margin-top:12px;">'+photos+'</div>':''}
+  `;
+  document.getElementById('detail-modal').classList.add('open');
+};
+window.closeDetail = () => document.getElementById('detail-modal').classList.remove('open');
+
+/* ═══════════════════════════════════════════
+   EDIT ENTRY
+═══════════════════════════════════════════ */
+window.editEntry = (event, id) => {
+  event.stopPropagation();
+  const e = allEntries.find(x=>x.id===id);
+  if (!e) return;
+  editingId = id;
+  const propSel = document.getElementById('edit-property');
+  while (propSel.options.length>1) propSel.remove(1);
+  userProfile.properties.forEach(p=>propSel.add(new Option(p,p)));
+  document.getElementById('edit-person-me').textContent   = '👤 '+userProfile.meName;
+  document.getElementById('edit-person-wife').textContent = '👤 '+userProfile.wifeName;
+  setEditPerson(e.person);
+  document.getElementById('edit-date').value          = e.date;
+  document.getElementById('edit-start-time').value    = e.startTime||'';
+  document.getElementById('edit-stop-time').value     = e.stopTime||'';
+  document.getElementById('edit-duration-val').value  = e.minutes;
+  document.getElementById('edit-duration-unit').value = 'minutes';
+  document.getElementById('edit-duration-source').textContent = e.startTime&&e.stopTime?'(from times)':'';
+  document.getElementById('edit-property').value      = e.property;
+  document.getElementById('edit-category').value      = String(e.category);
+  document.getElementById('edit-desc').value          = e.description;
+  document.getElementById('edit-evidence-text').value = e.evidenceText||'';
+  // seed existing photos
+  editPendingPhotos = [];
+  editExistingURLs  = (e.photoURLs||[]).slice();
+  renderEditPreviews();
+  document.getElementById('edit-modal').classList.add('open');
+};
+
+window.setEditPerson = (p) => {
+  document.getElementById('edit-person-me').classList.toggle('active', p==='me');
+  document.getElementById('edit-person-wife').classList.remove('active','active-wife');
+  if (p==='wife') document.getElementById('edit-person-wife').classList.add('active-wife');
+  document.getElementById('edit-person-me').dataset.selected   = p==='me' ?'1':'';
+  document.getElementById('edit-person-wife').dataset.selected = p==='wife'?'1':'';
+};
+
+function getEditPerson() {
+  return document.getElementById('edit-person-wife').dataset.selected ? 'wife' : 'me';
+}
+
+window.calcEditDuration = () => {
+  const start = document.getElementById('edit-start-time').value;
+  const stop  = document.getElementById('edit-stop-time').value;
+  if (!start||!stop) return;
+  const [sh,sm]=start.split(':').map(Number), [eh,em]=stop.split(':').map(Number);
+  let diff=(eh*60+em)-(sh*60+sm); if(diff<=0) diff+=24*60;
+  document.getElementById('edit-duration-val').value=''+diff;
+  document.getElementById('edit-duration-unit').value='minutes';
+  document.getElementById('edit-duration-source').textContent='(calculated)';
+};
+window.onEditManualDuration = () => {
+  if(document.getElementById('edit-start-time').value||document.getElementById('edit-stop-time').value)
+    document.getElementById('edit-duration-source').textContent='(manual)';
+};
+
+window.saveEdit = async () => {
+  const date      = document.getElementById('edit-date').value;
+  const durVal    = parseFloat(document.getElementById('edit-duration-val').value);
+  const durUnit   = document.getElementById('edit-duration-unit').value;
+  const startTime = document.getElementById('edit-start-time').value;
+  const stopTime  = document.getElementById('edit-stop-time').value;
+  const property  = document.getElementById('edit-property').value;
+  const catIdx    = document.getElementById('edit-category').value;
+  const desc      = document.getElementById('edit-desc').value.trim();
+  const evidenceText = document.getElementById('edit-evidence-text').value.trim();
+  if (!date||!durVal||durVal<=0||!property||catIdx===''||!desc) { alert('Please fill all required fields.'); return; }
+  const minutes = durUnit==='hours'?Math.round(durVal*60):Math.round(durVal);
+  const btn = document.getElementById('edit-save-btn');
+  btn.innerHTML = '<span class="spinner"></span>';
+  btn.disabled = true;
+  try {
+    const newURLs   = await uploadPhotos(editPendingPhotos);
+    const photoURLs = [...editExistingURLs, ...newURLs];
+    await updateDoc(doc(db,'users',currentUser.uid,'entries',editingId),{
+      person:getEditPerson(), date, startTime, stopTime, minutes,
+      property, category:parseInt(catIdx), description:desc, evidenceText, photoURLs
+    });
+    showToast('Entry updated.');
+    closeEdit();
+  } catch(err) { alert('Error: '+err.message); }
+  finally { btn.textContent='Save Changes'; btn.disabled=false; }
+};
+window.closeEdit = () => {
+  document.getElementById('edit-modal').classList.remove('open');
+  editingId = null;
+  editPendingPhotos = [];
+  editExistingURLs  = [];
+  document.getElementById('edit-photo-preview').innerHTML = '';
+};
+
+/* ═══════════════════════════════════════════
+   LOG STATS BAR
+═══════════════════════════════════════════ */
+window.renderLogStats = () => {
+  const prop = document.getElementById('log-stats-property')?.value||'';
+  let entries = allEntries;
+  if (prop) entries = entries.filter(e=>e.property===prop);
+  const meMin   = entries.filter(e=>e.person==='me').reduce((t,e)=>t+e.minutes,0);
+  const wifeMin = entries.filter(e=>e.person==='wife').reduce((t,e)=>t+e.minutes,0);
+  const total   = meMin+wifeMin;
+  const fmt = m=>(m/60).toFixed(1);
+  document.getElementById('ls-total').textContent      = fmt(total);
+  document.getElementById('ls-total-sub').textContent  = `${entries.length} sessions`;
+  document.getElementById('ls-me').textContent         = fmt(meMin);
+  document.getElementById('ls-me-label').textContent   = userProfile.meName;
+  document.getElementById('ls-me-sub').textContent     = `${meMin} min`;
+  document.getElementById('ls-wife').textContent       = fmt(wifeMin);
+  document.getElementById('ls-wife-label').textContent = userProfile.wifeName;
+  document.getElementById('ls-wife-sub').textContent   = `${wifeMin} min`;
+};
+
+/* ═══════════════════════════════════════════
+   SUMMARY
+═══════════════════════════════════════════ */
+window.renderSummary = () => {
+  const entries  = allEntries;
+  const meMin    = entries.filter(e=>e.person==='me').reduce((s,e)=>s+e.minutes,0);
+  const wifeMin  = entries.filter(e=>e.person==='wife').reduce((s,e)=>s+e.minutes,0);
+  const totalMin = meMin+wifeMin;
+  const sg = document.getElementById('stats-grid');
+  if (!sg) return;
+  sg.innerHTML = `
+    <div class="stat-card"><div class="stat-label">Combined</div><div class="stat-value">${(totalMin/60).toFixed(1)}</div><div class="stat-sub">${totalMin} min</div></div>
+    <div class="stat-card"><div class="stat-label">${userProfile.meName}</div><div class="stat-value" style="color:#1d4ed8;">${(meMin/60).toFixed(1)}</div><div class="stat-sub">${meMin} min</div></div>
+    <div class="stat-card"><div class="stat-label">${userProfile.wifeName}</div><div class="stat-value" style="color:#9d174d;">${(wifeMin/60).toFixed(1)}</div><div class="stat-sub">${wifeMin} min</div></div>
+    <div class="stat-card"><div class="stat-label">Sessions</div><div class="stat-value" style="color:#16a34a;">${entries.length}</div><div class="stat-sub">logged</div></div>
+  `;
+  const mpEl = document.getElementById('mp-progress');
+  const fc = pct=>pct>=100?'success':pct>=50?'':'warning';
+  const p1=Math.min(100,(meMin/(100*60))*100);
+  const p2=Math.min(100,(wifeMin/(100*60))*100);
+  const pc=Math.min(100,(totalMin/(500*60))*100);
+  mpEl.innerHTML = `
+    <div style="margin-bottom:14px;font-size:12px;color:var(--muted);">
+      Qualify if each person logs <b>100+ hours</b> and no one else works more, or combined <b>500+ hours</b>.
+    </div>
+    <div class="progress-wrap">
+      <div class="progress-label"><span>${userProfile.meName} (100h)</span><span>${(meMin/60).toFixed(1)}h / 100h</span></div>
+      <div class="progress-bar"><div class="progress-fill ${fc(p1)}" style="width:${p1}%;"></div></div>
+    </div>
+    <div class="progress-wrap" style="margin-top:10px;">
+      <div class="progress-label"><span>${userProfile.wifeName} (100h)</span><span>${(wifeMin/60).toFixed(1)}h / 100h</span></div>
+      <div class="progress-bar"><div class="progress-fill ${fc(p2)}" style="width:${p2}%;"></div></div>
+    </div>
+    <div class="progress-wrap" style="margin-top:10px;">
+      <div class="progress-label"><span>Combined (500h)</span><span>${(totalMin/60).toFixed(1)}h / 500h</span></div>
+      <div class="progress-bar"><div class="progress-fill ${fc(pc)}" style="width:${pc}%;"></div></div>
+    </div>
+  `;
+  renderMonthlyBarChart(entries);
+
+  const catEl = document.getElementById('cat-breakdown');
+  const catMins = Array(7).fill(0);
+  entries.forEach(e=>{ catMins[e.category]=(catMins[e.category]||0)+e.minutes; });
+  const maxCat = Math.max(...catMins,1);
+  catEl.innerHTML = CATEGORIES.map((c,i)=>{
+    const h=(catMins[i]/60).toFixed(1);
+    const pct=(catMins[i]/maxCat)*100;
+    return `<div style="margin-bottom:9px;">
+      <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:2px;">
+        <span><span class="badge cat-${i}">${CAT_ICONS[i]} ${c}</span></span>
+        <span style="font-weight:600;">${h}h</span>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" style="width:${pct}%;"></div></div>
+    </div>`;
+  }).join('');
+
+  const propEl = document.getElementById('prop-breakdown');
+  const propMap = {};
+  entries.forEach(e=>{
+    if(!propMap[e.property]) propMap[e.property]={me:0,wife:0};
+    if(e.person==='me') propMap[e.property].me+=e.minutes;
+    else propMap[e.property].wife+=e.minutes;
+  });
+  const propKeys = Object.keys(propMap);
+  if (!propKeys.length) { propEl.innerHTML=`<div class="empty"><div class="empty-icon">🏠</div><p>No entries yet.</p></div>`; return; }
+  const maxProp = Math.max(...propKeys.map(k=>propMap[k].me+propMap[k].wife),1);
+  propEl.innerHTML = `<table style="width:100%;font-size:12px;border-collapse:collapse;">
+    <thead><tr><th>Property</th><th>${userProfile.meName}</th><th>${userProfile.wifeName}</th><th>Total</th><th style="width:35%;"></th></tr></thead>
+    <tbody>${propKeys.map(k=>{
+      const total=propMap[k].me+propMap[k].wife;
+      return `<tr>
+        <td><b>${k}</b></td>
+        <td>${(propMap[k].me/60).toFixed(1)}h</td>
+        <td>${(propMap[k].wife/60).toFixed(1)}h</td>
+        <td><b>${(total/60).toFixed(1)}h</b></td>
+        <td><div class="progress-bar"><div class="progress-fill" style="width:${(total/maxProp)*100}%;"></div></div></td>
+      </tr>`;
+    }).join('')}</tbody>
+  </table>`;
+};
+
+/* ═══════════════════════════════════════════
+   MONTHLY BAR CHART
+═══════════════════════════════════════════ */
+function renderMonthlyBarChart(entries) {
+  const el = document.getElementById('mp-bar-chart');
+  if (!el) return;
+  const year = parseInt(userProfile.year) || new Date().getFullYear();
+  const MNAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const monthMap = {};
+  MNAMES.forEach((_,i)=>{ monthMap[`${year}-${String(i+1).padStart(2,'0')}`]={me:0,wife:0}; });
+  entries.forEach(e=>{ const k=e.date.slice(0,7); if(monthMap[k]){ if(e.person==='me') monthMap[k].me+=e.minutes; else monthMap[k].wife+=e.minutes; } });
+  const months = Object.keys(monthMap).sort();
+  const W=700,H=200,pL=36,pR=12,pT=20,pB=30,plotW=W-pL-pR,plotH=H-pT-pB;
+  const gW=plotW/12, bPad=gW*.12, bW=(gW-bPad*3)/2;
+  const maxMin=Math.max(...months.map(m=>Math.max(monthMap[m].me,monthMap[m].wife)),1);
+  const maxH=Math.ceil(maxMin/60)+1;
+  const toY=h=>pT+plotH-(h/maxH)*plotH;
+  const MC='#2563eb', WC='#9d174d';
+  let svg=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" style="width:100%;display:block;font-family:-apple-system,Segoe UI,sans-serif;">`;
+  for(let i=0;i<=4;i++){
+    const v=(maxH/4)*i, y=toY(v);
+    svg+=`<line x1="${pL}" y1="${y.toFixed(1)}" x2="${W-pR}" y2="${y.toFixed(1)}" stroke="#e5e7eb" stroke-width="1"/>`;
+    svg+=`<text x="${pL-4}" y="${(y+3.5).toFixed(1)}" text-anchor="end" font-size="9" fill="#9ca3af">${Math.round(v)}h</text>`;
+  }
+  months.forEach((m,i)=>{
+    const mh=monthMap[m].me/60, wh=monthMap[m].wife/60;
+    const gx=pL+i*gW, mx=gx+bPad, wx=mx+bW+bPad;
+    const mH=(mh/maxH)*plotH, wH=(wh/maxH)*plotH;
+    if(mH>0.5){ svg+=`<rect x="${mx.toFixed(1)}" y="${toY(mh).toFixed(1)}" width="${bW.toFixed(1)}" height="${mH.toFixed(1)}" fill="${MC}" rx="2"/>`;
+      if(mh>=.5) svg+=`<text x="${(mx+bW/2).toFixed(1)}" y="${(toY(mh)-3).toFixed(1)}" text-anchor="middle" font-size="8" fill="${MC}">${mh.toFixed(1)}</text>`; }
+    if(wH>0.5){ svg+=`<rect x="${wx.toFixed(1)}" y="${toY(wh).toFixed(1)}" width="${bW.toFixed(1)}" height="${wH.toFixed(1)}" fill="${WC}" rx="2"/>`;
+      if(wh>=.5) svg+=`<text x="${(wx+bW/2).toFixed(1)}" y="${(toY(wh)-3).toFixed(1)}" text-anchor="middle" font-size="8" fill="${WC}">${wh.toFixed(1)}</text>`; }
+    svg+=`<text x="${(gx+gW/2).toFixed(1)}" y="${(H-pB+13).toFixed(1)}" text-anchor="middle" font-size="9" fill="#6b7280">${MNAMES[i]}</text>`;
+  });
+  svg+=`</svg>`;
+  el.innerHTML=svg;
+}
+
+/* ═══════════════════════════════════════════
+   SETTINGS
+═══════════════════════════════════════════ */
+window.openSettings = () => {
+  document.getElementById('setting-me-name').value   = userProfile.meName;
+  document.getElementById('setting-wife-name').value = userProfile.wifeName;
+  document.getElementById('setting-year').value      = userProfile.year;
+  renderPropertyChips();
+  document.getElementById('settings-modal').classList.add('open');
+};
+window.closeSettings = () => document.getElementById('settings-modal').classList.remove('open');
+
+window.saveSettings = async () => {
+  userProfile.meName   = document.getElementById('setting-me-name').value.trim() || 'Me';
+  userProfile.wifeName = document.getElementById('setting-wife-name').value.trim() || 'My Partner';
+  userProfile.year     = document.getElementById('setting-year').value;
+  await updateDoc(doc(db,'users',currentUser.uid), {
+    meName:userProfile.meName, wifeName:userProfile.wifeName, year:userProfile.year
+  });
+  refreshPersonButtons();
+  refreshPropertyDropdowns();
+  closeSettings();
+  renderSummary();
+  renderLogStats();
+  showToast('Settings saved.');
+};
+
+window.addProperty = async () => {
+  const name = document.getElementById('new-property').value.trim();
+  if (!name) return;
+  if (userProfile.properties.includes(name)) { alert('Already exists.'); return; }
+  userProfile.properties.push(name);
+  try {
+    await updateDoc(doc(db,'users',currentUser.uid), { properties: userProfile.properties });
+    document.getElementById('new-property').value = '';
+    renderPropertyChips();
+    refreshPropertyDropdowns();
+  } catch(err) {
+    console.error('Failed to save property:', err.code, err.message);
+    userProfile.properties.pop(); // roll back
+    alert('Failed to save property: ' + err.code);
+  }
+};
+
+window.removeProperty = async (name) => {
+  if (!confirm(`Remove "${name}"?`)) return;
+  userProfile.properties = userProfile.properties.filter(p=>p!==name);
+  await updateDoc(doc(db,'users',currentUser.uid), { properties: userProfile.properties });
+  renderPropertyChips();
+  refreshPropertyDropdowns();
+};
+
+function renderPropertyChips() {
+  const el = document.getElementById('property-chips-list');
+  el.innerHTML = userProfile.properties.map(p=>
+    `<span class="property-chip remove">${p} <span onclick="removeProperty('${p.replace(/'/g,"\\'")}')" style="cursor:pointer;margin-left:4px;">✕</span></span>`
+  ).join('') || '<span style="color:var(--muted);font-size:12px;">No properties yet.</span>';
+}
+
+/* ═══════════════════════════════════════════
+   ADMIN PANEL
+═══════════════════════════════════════════ */
+window.openAdmin = async () => {
+  document.getElementById('admin-modal').classList.add('open');
+  loadAdminRequests();
+  loadAdminUsers();
+};
+window.closeAdmin = () => document.getElementById('admin-modal').classList.remove('open');
+
+async function loadAdminRequests() {
+  const el = document.getElementById('admin-requests-list');
+  el.innerHTML = '<div style="color:var(--muted);font-size:13px;">Loading…</div>';
+  try {
+    const snap = await getDocs(
+      query(collection(db,'accountRequests'), orderBy('createdAt','desc'))
+    );
+    if (snap.empty) { el.innerHTML='<p style="color:var(--muted);font-size:13px;">No requests yet.</p>'; return; }
+    el.innerHTML = snap.docs.map(d => {
+      const r = d.data();
+      const statusBadge = `<span class="badge badge-${r.status||'pending'}">${r.status||'pending'}</span>`;
+      const date = r.createdAt?.toDate?.().toLocaleDateString() || '—';
+      const actions = r.status === 'pending'
+        ? `<div class="request-actions">
+             <button class="btn btn-primary btn-sm" onclick="approveRequest('${d.id}','${r.email}','${r.name.replace(/'/g,"\\'")}')">Approve</button>
+             <button class="btn btn-danger btn-sm"  onclick="denyRequest('${d.id}','${r.email}')">Deny</button>
+           </div>`
+        : `<div class="request-actions"><span style="font-size:11px;color:var(--muted);">${r.status}</span></div>`;
+      return `<div class="request-row">
+        <div style="min-width:0;">
+          <div class="user-email">${r.email}</div>
+          <div class="user-meta">${r.name||'—'} · ${date} ${r.reason ? '· "'+r.reason+'"':''}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">${statusBadge}${actions}</div>
+      </div>`;
+    }).join('');
+  } catch(err) {
+    el.innerHTML=`<p style="color:var(--danger);font-size:13px;">Error: ${err.message}</p>`;
+  }
+}
+
+async function loadAdminUsers() {
+  const listEl = document.getElementById('admin-users-list');
+  listEl.innerHTML = '<div style="color:var(--muted);font-size:13px;">Loading…</div>';
+  try {
+    const snap = await getDocs(collection(db,'users'));
+    if (snap.empty) { listEl.innerHTML='<p style="color:var(--muted);font-size:13px;">No users found.</p>'; return; }
+    listEl.innerHTML = snap.docs.map(d=>{
+      const u = d.data();
+      const isAdminUser = !!u.admin;
+      const disabledTag = u.disabled ? ' · 🚫 Disabled' : '';
+      return `<div class="user-row">
+        <div>
+          <div class="user-email">${u.email}</div>
+          <div class="user-meta">${u.name||'—'} · Joined: ${u.createdAt?.toDate?.().toLocaleDateString()||'—'}${isAdminUser?' · 👑 Admin':''}${disabledTag}</div>
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;">
+          <button class="btn btn-ghost btn-sm" onclick="resetUserPassword('${u.email}')">Reset Password</button>
+          ${!isAdminUser ? `
+            <button class="btn btn-ghost btn-sm" onclick="removeUser('${d.id}','${u.email}')">${u.disabled?'Re-enable':'Disable'}</button>
+            <button class="btn btn-danger btn-sm" onclick="deleteUser('${d.id}','${u.email}')">Delete</button>` : ''}
+        </div>
+      </div>`;
+    }).join('');
+  } catch(err) {
+    listEl.innerHTML=`<p style="color:var(--danger);font-size:13px;">Error: ${err.message}</p>`;
+  }
+}
+
+window.approveRequest = async (requestId, email, name) => {
+  if (!confirm(`Approve access for ${email}?\n\nThis will create their account and send them a password-setup email.`)) return;
+  try {
+    const approveAccount = httpsCallable(functions, 'approveAccountRequest');
+    const result = await approveAccount({ requestId, email, name });
+    showToast(`✓ Account created for ${email}. Password-setup email sent.`);
+    loadAdminRequests();
+    loadAdminUsers();
+  } catch(err) {
+    console.error('Approve error:', err);
+    alert('Failed to approve: ' + (err.message || err.details || err));
+  }
+};
+
+window.createNewUser = async () => {
+  const name     = document.getElementById('new-user-name').value.trim();
+  const email    = document.getElementById('new-user-email').value.trim();
+  const password = document.getElementById('new-user-password').value;
+  const msgEl    = document.getElementById('new-user-msg');
+  const btn      = document.getElementById('new-user-btn');
+  msgEl.style.color = 'var(--danger)';
+  if (!name || !email || !password) { msgEl.textContent = 'Name, email and password are all required.'; return; }
+  if (password.length < 6)          { msgEl.textContent = 'Password must be at least 6 characters.'; return; }
+  btn.disabled = true; btn.textContent = 'Creating…'; msgEl.textContent = '';
+  try {
+    const createUser = httpsCallable(functions, 'createUserWithPassword');
+    await createUser({ name, email, password });
+    showToast(`✓ Account created for ${email}.`);
+    document.getElementById('new-user-name').value = '';
+    document.getElementById('new-user-email').value = '';
+    document.getElementById('new-user-password').value = '';
+    loadAdminUsers();
+  } catch(err) {
+    console.error('Create user error:', err);
+    msgEl.textContent = err.message || 'Failed to create user.';
+  } finally {
+    btn.disabled = false; btn.textContent = 'Create User';
+  }
+};
+
+window.resetUserPassword = async (email) => {
+  if (!confirm(`Send a password reset link to ${email}?`)) return;
+  try {
+    await sendPasswordResetEmail(auth, email);
+    showToast(`✓ Password reset link sent to ${email}.`);
+  } catch(err) {
+    console.error('Reset error:', err);
+    alert('Failed to send reset link: ' + friendlyAuthError(err.code));
+  }
+};
+
+window.denyRequest = async (requestId, email) => {
+  if (!confirm(`Deny access request from ${email}?`)) return;
+  await updateDoc(doc(db,'accountRequests',requestId), { status: 'denied' });
+  showToast(`Request from ${email} denied.`);
+  loadAdminRequests();
+};
+
+window.removeUser = async (uid, email) => {
+  const snap = await getDoc(doc(db,'users',uid));
+  const isDisabled = snap.exists() && snap.data().disabled === true;
+  if (isDisabled) {
+    if (!confirm(`Re-enable account for ${email}?`)) return;
+    await updateDoc(doc(db,'users',uid), { disabled: false });
+    showToast(`${email} re-enabled.`);
+  } else {
+    if (!confirm(`Disable account for ${email}? They will be blocked from signing in.`)) return;
+    await updateDoc(doc(db,'users',uid), { disabled: true });
+    showToast(`${email} disabled.`);
+  }
+  loadAdminUsers();
+};
+
+window.deleteUser = async (uid, email) => {
+  if (!confirm(`⚠️ Permanently delete ${email}?\n\nThis will delete their account AND all their activity log entries. This cannot be undone.`)) return;
+  if (!confirm(`Are you sure? All data for ${email} will be gone forever.`)) return;
+  try {
+    const deleteAccount = httpsCallable(functions, 'deleteUserAccount');
+    await deleteAccount({ uid });
+    showToast(`✓ ${email} deleted.`);
+    loadAdminUsers();
+  } catch(err) {
+    console.error('Delete error:', err);
+    alert('Failed to delete user: ' + (err.message || err));
+  }
+};
+
+/* ═══════════════════════════════════════════
+   IMPORT CSV
+═══════════════════════════════════════════ */
+let importRows    = [];   // parsed data rows (arrays)
+let importHeaders = [];   // header row
+let importMapped  = [];   // validated entry objects ready to write
+
+const IMPORT_FIELDS = [
+  { key:'date',        label:'Date *',        required:true  },
+  { key:'person',      label:'Person *',      required:true  },
+  { key:'minutes',     label:'Minutes (or Hours)', required:false },
+  { key:'hours',       label:'Hours (if no Minutes)', required:false },
+  { key:'property',    label:'Property *',    required:true  },
+  { key:'category',    label:'Category *',    required:true  },
+  { key:'description', label:'Description *', required:true  },
+  { key:'evidenceText',label:'Evidence Notes',required:false },
+  { key:'startTime',   label:'Start Time',    required:false },
+  { key:'stopTime',    label:'Stop Time',     required:false },
+];
+
+// Parse a CSV string into [ [row], [row], … ]
+function parseCSV(text) {
+  const lines = text.replace(/\r\n/g,'\n').replace(/\r/g,'\n').split('\n').filter(l=>l.trim());
+  return lines.map(line => {
+    const cells = [];
+    let cur = '', inQ = false;
+    for (let i=0;i<line.length;i++) {
+      const c = line[i];
+      if (c==='"') { if (inQ && line[i+1]==='"') { cur+='"'; i++; } else inQ=!inQ; }
+      else if (c===',' && !inQ) { cells.push(cur.trim()); cur=''; }
+      else cur+=c;
+    }
+    cells.push(cur.trim());
+    return cells;
+  });
+}
+
+// Auto-guess column mapping from header names
+function guessMapping(headers) {
+  const map = {};
+  const norm = s => s.toLowerCase().replace(/[^a-z0-9]/g,'');
+  headers.forEach((h,i) => {
+    const n = norm(h);
+    if (!map.date        && (n.includes('date')))                          map.date         = i;
+    if (!map.person      && (n.includes('person') || n.includes('who')))   map.person       = i;
+    if (!map.minutes     && n==='minutes')                                  map.minutes      = i;
+    if (!map.hours       && n==='hours')                                    map.hours        = i;
+    if (!map.property    && n.includes('property'))                        map.property     = i;
+    if (!map.category    && n.includes('category') || n.includes('cat'))   map.category     = i;
+    if (!map.description && (n.includes('desc') || n.includes('work')))    map.description  = i;
+    if (!map.evidenceText&& (n.includes('evidence') || n.includes('note')))map.evidenceText = i;
+    if (!map.startTime   && (n.includes('start')))                         map.startTime    = i;
+    if (!map.stopTime    && (n.includes('stop') || n.includes('end')))     map.stopTime     = i;
+  });
+  return map;
+}
+
+function getMappingSelects() {
+  const result = {};
+  IMPORT_FIELDS.forEach(f => {
+    const sel = document.getElementById('imap-'+f.key);
+    if (sel) result[f.key] = sel.value === '' ? null : parseInt(sel.value);
+  });
+  return result;
+}
+
+function resolveCategory(raw) {
+  if (!raw) return null;
+  const n = raw.trim().toLowerCase();
+  // numeric index
+  const idx = parseInt(raw);
+  if (!isNaN(idx) && idx >= 0 && idx < CATEGORIES.length) return idx;
+  // fuzzy name match
+  for (let i=0;i<CATEGORIES.length;i++) {
+    if (CATEGORIES[i].toLowerCase().includes(n) || n.includes(CATEGORIES[i].toLowerCase().split(' ')[0])) return i;
+  }
+  return null;
+}
+
+function resolvePerson(raw, meName, wifeName) {
+  if (!raw) return null;
+  const n = raw.trim().toLowerCase();
+  if (n==='me' || n===meName.toLowerCase()) return 'me';
+  if (n==='wife' || n==='partner' || n===wifeName.toLowerCase()) return 'wife';
+  return null;
+}
+
+window.openImport = () => {
+  importRows=[]; importHeaders=[]; importMapped=[];
+  document.getElementById('import-step-1').style.display='';
+  document.getElementById('import-step-2').style.display='none';
+  document.getElementById('import-step-3').style.display='none';
+  document.getElementById('import-file-name').textContent='';
+  document.getElementById('import-file-input').value='';
+  document.getElementById('import-modal').classList.add('open');
+};
+window.closeImport = () => document.getElementById('import-modal').classList.remove('open');
+
+window.importFileChosen = (input) => {
+  const file = input.files[0];
+  if (!file) return;
+  document.getElementById('import-file-name').textContent = file.name;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const all = parseCSV(e.target.result);
+    if (all.length < 2) { alert('CSV must have a header row and at least one data row.'); return; }
+    importHeaders = all[0];
+    importRows    = all.slice(1).filter(r => r.some(c=>c));
+    const guessed = guessMapping(importHeaders);
+    // Build mapping UI
+    const grid = document.getElementById('import-mapping-grid');
+    grid.innerHTML = '';
+    IMPORT_FIELDS.forEach(f => {
+      const div = document.createElement('div');
+      div.className = 'form-group';
+      const lbl = document.createElement('label');
+      lbl.textContent = f.label;
+      const sel = document.createElement('select');
+      sel.id = 'imap-'+f.key;
+      const skip = document.createElement('option');
+      skip.value=''; skip.textContent='(skip)';
+      sel.appendChild(skip);
+      importHeaders.forEach((h,i) => {
+        const opt = document.createElement('option');
+        opt.value=i; opt.textContent=h||`Column ${i+1}`;
+        sel.appendChild(opt);
+      });
+      if (guessed[f.key] !== undefined) sel.value = guessed[f.key];
+      div.appendChild(lbl);
+      div.appendChild(sel);
+      grid.appendChild(div);
+    });
+    document.getElementById('import-map-error').style.display='none';
+    document.getElementById('import-preview-wrap').style.display='none';
+    document.getElementById('import-step-1').style.display='none';
+    document.getElementById('import-step-2').style.display='';
+  };
+  reader.readAsText(file);
+};
+
+window.importBack  = () => { document.getElementById('import-step-2').style.display='none'; document.getElementById('import-step-1').style.display=''; };
+window.importBack2 = () => { document.getElementById('import-step-3').style.display='none'; document.getElementById('import-step-2').style.display=''; };
+
+window.importPreview = () => {
+  const errEl = document.getElementById('import-map-error');
+  errEl.style.display='none';
+  const m = getMappingSelects();
+  // Validate required fields are mapped
+  const missing = IMPORT_FIELDS.filter(f=>f.required && m[f.key]===null).map(f=>f.label.replace(' *',''));
+  // minutes OR hours must be mapped
+  if (m.minutes===null && m.hours===null) missing.push('Minutes or Hours');
+  if (missing.length) { errEl.textContent='Please map: '+missing.join(', '); errEl.style.display=''; return; }
+
+  const errors = [], valid = [];
+  importRows.forEach((row, ri) => {
+    const get = key => m[key]!==null && m[key]!==undefined ? (row[m[key]]||'').trim() : '';
+    const dateRaw = get('date');
+    const personRaw = get('person');
+    const minRaw  = get('minutes');
+    const hrRaw   = get('hours');
+    const prop    = get('property');
+    const catRaw  = get('category');
+    const desc    = get('description');
+
+    // date — accept YYYY-MM-DD or M/D/YYYY or M/D/YY
+    let date = dateRaw;
+    if (/^\d{1,2}\/\d{1,2}\/\d{2,4}$/.test(date)) {
+      const [mo,dy,yr] = date.split('/');
+      const y = yr.length===2 ? '20'+yr : yr;
+      date = `${y}-${mo.padStart(2,'0')}-${dy.padStart(2,'0')}`;
+    }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) { errors.push(`Row ${ri+2}: invalid date "${dateRaw}"`); return; }
+
+    const person = resolvePerson(personRaw, userProfile.meName, userProfile.wifeName);
+    if (!person) { errors.push(`Row ${ri+2}: unknown person "${personRaw}" — use your name, your partner's name, "me" or "partner"`); return; }
+
+    let minutes = minRaw ? parseInt(minRaw) : null;
+    if (minutes===null || isNaN(minutes)) {
+      const hrs = parseFloat(hrRaw);
+      if (!isNaN(hrs) && hrs>0) minutes = Math.round(hrs*60);
+    }
+    if (!minutes || minutes<=0) { errors.push(`Row ${ri+2}: could not parse duration`); return; }
+
+    if (!prop) { errors.push(`Row ${ri+2}: property is empty`); return; }
+    if (!desc) { errors.push(`Row ${ri+2}: description is empty`); return; }
+
+    const category = resolveCategory(catRaw);
+    if (category===null) { errors.push(`Row ${ri+2}: unknown category "${catRaw}"`); return; }
+
+    valid.push({
+      date, person, minutes, property:prop, category,
+      description:desc,
+      evidenceText: get('evidenceText'),
+      startTime:    get('startTime'),
+      stopTime:     get('stopTime'),
+      photoURLs:    [],
+    });
+  });
+
+  importMapped = valid;
+
+  // Show preview table of first 3 valid rows
+  const pvWrap = document.getElementById('import-preview-wrap');
+  const pvTable = document.getElementById('import-preview-table');
+  const cols = ['date','person','minutes','property','category','description'];
+  pvTable.innerHTML = `<thead><tr>${cols.map(c=>`<th>${c}</th>`).join('')}</tr></thead>
+    <tbody>${valid.slice(0,3).map(e=>`<tr>
+      <td>${e.date}</td><td>${e.person}</td><td>${e.minutes}</td>
+      <td>${e.property}</td><td>${CATEGORIES[e.category]}</td>
+      <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${e.description}</td>
+    </tr>`).join('')}</tbody>`;
+  pvWrap.style.display='';
+
+  // Show confirm step
+  const errWrap = document.getElementById('import-errors-wrap');
+  if (errors.length) {
+    errWrap.innerHTML = `<p style="font-size:12px;font-weight:700;color:var(--danger);margin-bottom:6px;">${errors.length} row(s) will be skipped:</p>
+      <ul style="font-size:12px;color:var(--danger);padding-left:18px;max-height:120px;overflow-y:auto;">${errors.map(e=>`<li>${e}</li>`).join('')}</ul>`;
+  } else {
+    errWrap.innerHTML = '';
+  }
+  document.getElementById('import-confirm-msg').textContent =
+    `Ready to import ${valid.length} entr${valid.length===1?'y':'ies'}${errors.length?` (${errors.length} skipped)`:''}. This cannot be undone.`;
+  document.getElementById('import-confirm-btn').textContent = `Import ${valid.length} entries`;
+  document.getElementById('import-step-2').style.display='none';
+  document.getElementById('import-step-3').style.display='';
+};
+
+window.importConfirm = async () => {
+  if (!importMapped.length) return;
+  const btn = document.getElementById('import-confirm-btn');
+  btn.disabled=true; btn.textContent='Importing…';
+  try {
+    // Write in chunks of 500 (Firestore batch limit)
+    const CHUNK = 499;
+    for (let i=0;i<importMapped.length;i+=CHUNK) {
+      const chunk = importMapped.slice(i, i+CHUNK);
+      const b = writeBatch(db);
+      chunk.forEach(entry => {
+        const ref = doc(collection(db,'users',currentUser.uid,'entries'));
+        b.set(ref, { ...entry, createdAt: serverTimestamp() });
+      });
+      await b.commit();
+    }
+    showToast(`✓ Imported ${importMapped.length} entries`);
+    closeImport();
+  } catch(err) {
+    alert('Import failed: '+err.message);
+    btn.disabled=false; btn.textContent=`Import ${importMapped.length} entries`;
+  }
+};
+
+
+/* ═══════════════════════════════════════════
+   EXPORT CSV
+═══════════════════════════════════════════ */
+window.exportCSV = () => {
+  if (!allEntries.length) { alert('No entries to export.'); return; }
+  const list = allEntries.slice().sort((a,b)=>a.date.localeCompare(b.date));
+  const header = ['Date','Start Time','Stop Time','Person','Property','Category','Description','Evidence','Minutes','Hours'];
+  const q = s => `"${String(s||'').replace(/"/g,'""')}"`;
+  const rows = list.map(e=>[
+    q(e.date),
+    q(e.startTime),
+    q(e.stopTime),
+    q(e.person==='me'?userProfile.meName:userProfile.wifeName),
+    q(e.property),
+    q(CATEGORIES[e.category]),
+    q(e.description),
+    q(e.evidenceText),
+    e.minutes,
+    (e.minutes/60).toFixed(2)
+  ]);
+  const csv=[header,...rows].map(r=>r.join(',')).join('\n');
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
+  a.download=`str_hours_${userProfile.year}.csv`;
+  a.click();
+};
+
+/* ═══════════════════════════════════════════
+   TAB SWITCHING
+═══════════════════════════════════════════ */
+window.switchTab = (name) => {
+  const tabs=['log','entries','summary'];
+  document.querySelectorAll('.tab-btn').forEach((b,i)=>b.classList.toggle('active',tabs[i]===name));
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  if(name==='entries') renderEntries();
+  if(name==='summary') renderSummary();
+};
+
+/* ═══════════════════════════════════════════
+   TOAST
+═══════════════════════════════════════════ */
+function showToast(msg) {
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2500);
+}
+
+/* Close modals on outside click */
+document.querySelectorAll('.modal-overlay').forEach(o=>{
+  o.addEventListener('click',e=>{ if(e.target===o) o.classList.remove('open'); });
+});
+
+</script>
+</body>
+</html>
